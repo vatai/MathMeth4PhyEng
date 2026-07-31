@@ -1,0 +1,649 @@
+#+title: Examples from "Mathematical Methods For Physics and Engineering"
+#+latex_compiler: lualatex
+#+latex_header: \usepackage{tikz}
+#+latex_header: \usepackage{multicol}
+#+options:  ':t
+#+PROPERTY: header-args:sage :results drawer :exports both
+
+
+* 5
+** 5.9
+:PROPERTIES:
+:header-args: :session 5-9
+:END:
+*** Problem
+Find the stationary points of
+#+begin_src sage
+  load("startup.sage")
+  xyz = var("x,y,z")
+  def f(x, y, z):
+      return x**3 + y**3 + z**3
+
+  f_rhs = f(x,y,z)
+  print(f"$f(x, y, z) = {latex(f_rhs)}$")
+#+end_src
+
+#+RESULTS:
+:results:
+$f(x, y, z) = x^{3} + y^{3} + z^{3}$
+:end:
+
+1. subject to
+   #+begin_src sage
+     def g(x, y, z):
+         return x^2 + y^2 + z^2
+
+     g_rhs = g(x,y,z)
+     g_cnst = g_rhs == 1
+     print(f"$g(x, y, z) = {latex(g_cnst)}$")
+   #+end_src
+
+   #+RESULTS:
+   :results:
+   $g(x, y, z) = x^{2} + y^{2} + z^{2} = 1$
+   :end:
+
+2. $g(x, y, z) = x^2 +y^2 + z^2 = 1$ and $h(x, y, z) = x + y + z = 0$
+   #+begin_src sage
+     def h(x, y, z):
+         return x + y + z
+
+     h_rhs = h(x, y, z)
+     h_cnst = h_rhs == 0
+     print(rf"$g(x, y, z) = {latex(g_cnst)} \land h(x, y, z) = {latex(h_cnst)}$")
+   #+end_src
+
+   #+RESULTS:
+   :results:
+   $g(x, y, z) = x^{2} + y^{2} + z^{2} = 1 \land h(x, y, z) = x + y + z = 0$
+   :end:
+
+*** Solution
+Let set up Lagrangian multipliers (and temporarily assume that $x, y, z \neq 0$)
+#+begin_src sage
+  _ = var("lmbda", latex_name=r"\lambda")
+
+  lagrange_eqns = [f_rhs.diff(v) + lmbda*g_rhs.diff(v) == 0 for v in xyz]
+  print(r"\begin{align*}")
+  for v, eq in zip(xyz, lagrange_eqns):
+      factored = eq.lhs().factor()
+      print(rf"\frac{{\partial}}{{\partial {v}}} (f+\lambda g) &={latex(eq.lhs())} = {latex(factored)} = {latex(eq.rhs())} \\")
+  print(r"\end{align*}")
+#+end_src
+
+#+RESULTS:
+:results:
+\begin{align*}
+\frac{\partial}{\partial x} (f+\lambda g) &=2 \, {\lambda} x + 3 \, x^{2} = {\left(2 \, {\lambda} + 3 \, x\right)} x = 0 \\
+\frac{\partial}{\partial y} (f+\lambda g) &=2 \, {\lambda} y + 3 \, y^{2} = {\left(2 \, {\lambda} + 3 \, y\right)} y = 0 \\
+\frac{\partial}{\partial z} (f+\lambda g) &=2 \, {\lambda} z + 3 \, z^{2} = {\left(2 \, {\lambda} + 3 \, z\right)} z = 0 \\
+\end{align*}
+:end:
+
+**** Non-zero
+***** Vars in lambda
+From this we can get $x$, $y$, $z$ as functions of $\lambda$:
+#+begin_src sage
+  assume([v != 0 for v in xyz])
+  nz_vars_in_lambda = [solve(lagrange_eqns[i], v)[0] for i,v in enumerate(xyz)]
+  print(r"\begin{gather*}")
+  for e in nz_vars_in_lambda:
+    print(fr"{latex(e)}\\")
+  print(r"\end{gather*}")
+#+end_src
+
+#+RESULTS:
+:results:
+\begin{gather*}
+x = -\frac{2}{3} \, {\lambda}\\
+y = -\frac{2}{3} \, {\lambda}\\
+z = -\frac{2}{3} \, {\lambda}\\
+\end{gather*}
+:end:
+***** Lambda
+Substituting back to
+#+begin_src sage
+  nz_lambda_subs = g_cnst.substitute(nz_vars_in_lambda)
+  print(f"${latex(nz_lambda_subs)}$")
+#+end_src
+
+#+RESULTS:
+:results:
+$\frac{4}{3} \, {\lambda}^{2} = 1$
+:end:
+
+#+begin_src sage :results output
+  nz_lambdas = solve(nz_lambda_subs, lmbda)
+  print(f"${latex(nz_lambdas)}$")
+#+end_src
+
+#+RESULTS:
+:results:
+$\left[{\lambda} = -\frac{1}{2} \, \sqrt{3}, {\lambda} = \frac{1}{2} \, \sqrt{3}\right]$
+:end:
+***** Solutions
+Stationary points are at: $x=y=z=\pm \sqrt3 / 3 = \pm 1/\sqrt3$. (for non-zero $x$, $y$, $z$).
+#+begin_src sage
+  sep_nz_sols = [solve(e.substitute(nz_lambda), v) for e, v in zip(lagrange_eqns, xyz) for nz_lambda in nz_lambdas]
+  assert all([len(s) == 1 for s in sep_nz_sols])
+  print(f"${latex(sep_nz_sols)}$")
+#+end_src
+
+#+RESULTS:
+:results:
+$\left[\left[x = \frac{1}{3} \, \sqrt{3}\right], \left[x = -\frac{1}{3} \, \sqrt{3}\right], \left[y = \frac{1}{3} \, \sqrt{3}\right], \left[y = -\frac{1}{3} \, \sqrt{3}\right], \left[z = \frac{1}{3} \, \sqrt{3}\right], \left[z = -\frac{1}{3} \, \sqrt{3}\right]\right]$
+:end:
+
+#+begin_src sage
+  def all_solutions(sep_solutions):
+    sols_dict = {}
+    for expr in sep_solutions:
+        ex = expr[0]
+        k = ex.lhs()
+        if k in sols_dict:
+          sols_dict[k].append(ex)
+        else:
+          sols_dict[k] = [ex]
+
+    rv = [[]]
+    for i, (k, v) in enumerate(sols_dict.items()):
+        rv = [nzs + [s] for nzs in rv for s in v]
+    return rv
+
+  nz_solns = all_solutions(sep_nz_sols)
+  for nz_sol in nz_solns:
+        print(f"${latex(nz_sol)}$")
+#+end_src
+
+#+RESULTS:
+:results:
+$\left[x = \frac{1}{3} \, \sqrt{3}, y = \frac{1}{3} \, \sqrt{3}, z = \frac{1}{3} \, \sqrt{3}\right]$
+$\left[x = \frac{1}{3} \, \sqrt{3}, y = \frac{1}{3} \, \sqrt{3}, z = -\frac{1}{3} \, \sqrt{3}\right]$
+$\left[x = \frac{1}{3} \, \sqrt{3}, y = -\frac{1}{3} \, \sqrt{3}, z = \frac{1}{3} \, \sqrt{3}\right]$
+$\left[x = \frac{1}{3} \, \sqrt{3}, y = -\frac{1}{3} \, \sqrt{3}, z = -\frac{1}{3} \, \sqrt{3}\right]$
+$\left[x = -\frac{1}{3} \, \sqrt{3}, y = \frac{1}{3} \, \sqrt{3}, z = \frac{1}{3} \, \sqrt{3}\right]$
+$\left[x = -\frac{1}{3} \, \sqrt{3}, y = \frac{1}{3} \, \sqrt{3}, z = -\frac{1}{3} \, \sqrt{3}\right]$
+$\left[x = -\frac{1}{3} \, \sqrt{3}, y = -\frac{1}{3} \, \sqrt{3}, z = \frac{1}{3} \, \sqrt{3}\right]$
+$\left[x = -\frac{1}{3} \, \sqrt{3}, y = -\frac{1}{3} \, \sqrt{3}, z = -\frac{1}{3} \, \sqrt{3}\right]$
+:end:
+
+**** Allow zero
+If we allow $x$, $y$, $z$ to be zero, we can't have $x=y=z=0$ because that violates $g(x,y,z) = x^2 + y^2 + z^2 = 1$.
+
+#+begin_src sage
+  contra = g_cnst.substitute([x==0, y==0, z==0])
+  print(f"${latex(contra)}$ is {bool(contra)}")
+#+end_src
+
+#+RESULTS:
+:results:
+$0 = 1$ is False
+:end:
+
+***** Setup $x=0$
+For example, if $x=0$ then
+#+begin_src sage
+  def reduced_problem(subs):
+      eqns = [eq.substitute(subs) for eq in lagrange_eqns]
+      eqns = [eq for eq in eqns if not bool(eq.lhs() == eq.rhs())]
+      eqns.append(g_cnst.substitute(subs))
+      return eqns
+  xz_eqns = reduced_problem(x==0)
+  print(r"\begin{align*}")
+  for eq in xz_eqns:
+      print(fr"{latex(eq.lhs())} &= {latex(eq.rhs())} \\")
+  print(r"\end{align*}")
+#+end_src
+
+#+RESULTS:
+:results:
+\begin{align*}
+2 \, {\lambda} y + 3 \, y^{2} &= 0 \\
+2 \, {\lambda} z + 3 \, z^{2} &= 0 \\
+y^{2} + z^{2} &= 1 \\
+\end{align*}
+:end:
+
+***** $\lambda = 0$ not possible
+If $\lambda = 0$ then we have:
+
+#+begin_src sage
+  xz_lambda_zero = [eq.substitute(lmbda==0) for eq in xz_eqns]
+  print(r"\begin{align*}")
+  for eq in xz_lambda_zero:
+      print(fr"{latex(eq.lhs())} &= {latex(eq.rhs())} \\")
+  print(r"\end{align*}")
+#+end_src
+
+#+RESULTS:
+:results:
+\begin{align*}
+3 \, y^{2} &= 0 \\
+3 \, z^{2} &= 0 \\
+y^{2} + z^{2} &= 1 \\
+\end{align*}
+:end:
+
+which is obviously a contradiction since:
+
+#+begin_src sage
+  contra = xz_lambda_zero[0] + xz_lambda_zero[1] - 3 * xz_lambda_zero[2]
+  print(f"${latex(contra)}$ is {bool(contra)}")
+#+end_src
+
+#+RESULTS:
+:results:
+$0 = \left(-3\right)$ is False
+:end:
+
+***** Lambdas for $x=0$
+#+begin_src sage
+  def red_lambda(red_eqns):
+      return [solve(eq, lmbda)[0] for eq in red_eqns[:2]]
+
+  xz_lambdas_in_vars = red_lambda(xz_eqns)
+  print(f"${latex(xz_lambdas_in_vars)}$")
+#+end_src
+
+#+RESULTS:
+:results:
+$\left[{\lambda} = -\frac{3}{2} \, y, {\lambda} = -\frac{3}{2} \, z\right]$
+:end:
+
+This implies
+#+begin_src sage
+  def red_lambda_solutions(red_lambdas, nz_vars):
+      slns = [solve(rl, v) for rl, v in zip(red_lambdas, nz_vars)]
+      assert all(len(sln) == 1 for sln in slns)
+      return [s[0] for s in slns]
+
+  xz_vars_in_lambdas = red_lambda_solutions(xz_lambdas_in_vars, [y, z])
+  print(f"${latex(xz_vars_in_lambdas)}$")
+#+end_src
+
+#+RESULTS:
+:results:
+$\left[y = -\frac{2}{3} \, {\lambda}, z = -\frac{2}{3} \, {\lambda}\right]$
+:end:
+
+#+begin_src sage
+  def red_solutions(red_eqns, red_vars_in_lambdas):
+      return red_eqns[2].substitute(red_vars_in_lambdas)
+
+  xz_lambda_subs = red_solutions(xz_eqns, xz_vars_in_lambdas)
+  print(f"${latex(xz_lambda_subs)}$")
+#+end_src
+
+#+RESULTS:
+:results:
+$\frac{8}{9} \, {\lambda}^{2} = 1$
+:end:
+
+#+begin_src sage
+  xz_lambdas = solve(xz_lambda_subs, lmbda)
+  print(f"${latex(xz_lambdas)}$")
+#+end_src
+
+#+RESULTS:
+:results:
+$\left[{\lambda} = -\frac{3}{4} \, \sqrt{2}, {\lambda} = \frac{3}{4} \, \sqrt{2}\right]$
+:end:
+
+***** Solutions for $x=0$
+#+begin_src sage
+  def red_sep_sols(red_eqns, lambdas, nz_vars):
+      return [solve(eq.substitute(subs), v) for eq, v in zip(red_eqns[:2], nz_vars) for subs in lambdas]
+  xz_sep_solns = red_sep_sols(xz_eqns, xz_lambdas, [y, z])
+  print(f"${latex(xz_sep_solns)}$")
+#+end_src
+
+#+RESULTS:
+:results:
+$\left[\left[y = \frac{1}{2} \, \sqrt{2}\right], \left[y = -\frac{1}{2} \, \sqrt{2}\right], \left[z = \frac{1}{2} \, \sqrt{2}\right], \left[z = -\frac{1}{2} \, \sqrt{2}\right]\right]$
+:end:
+
+#+begin_src sage
+  xz_solns = all_solutions([[x==0]] + xz_sep_solns)
+  for sol in xz_solns:
+        print(f"${latex(sol)}$")
+#+end_src
+
+#+RESULTS:
+:results:
+$\left[x = 0, y = \frac{1}{2} \, \sqrt{2}, z = \frac{1}{2} \, \sqrt{2}\right]$
+$\left[x = 0, y = \frac{1}{2} \, \sqrt{2}, z = -\frac{1}{2} \, \sqrt{2}\right]$
+$\left[x = 0, y = -\frac{1}{2} \, \sqrt{2}, z = \frac{1}{2} \, \sqrt{2}\right]$
+$\left[x = 0, y = -\frac{1}{2} \, \sqrt{2}, z = -\frac{1}{2} \, \sqrt{2}\right]$
+:end:
+
+***** $y=0$ solutions
+#+begin_src sage
+  yz_eqns = reduced_problem(y==0)
+  yz_sep_solns = red_sep_sols(yz_eqns, xz_lambdas, [x, z])
+  yz_solns = all_solutions(yz_sep_solns[:2] + [[y==0]] + yz_sep_solns[2:])
+  for sol in yz_solns:
+        print(f"${latex(sol)}$")
+#+end_src
+
+#+RESULTS:
+:results:
+$\left[x = \frac{1}{2} \, \sqrt{2}, y = 0, z = \frac{1}{2} \, \sqrt{2}\right]$
+$\left[x = \frac{1}{2} \, \sqrt{2}, y = 0, z = -\frac{1}{2} \, \sqrt{2}\right]$
+$\left[x = -\frac{1}{2} \, \sqrt{2}, y = 0, z = \frac{1}{2} \, \sqrt{2}\right]$
+$\left[x = -\frac{1}{2} \, \sqrt{2}, y = 0, z = -\frac{1}{2} \, \sqrt{2}\right]$
+:end:
+
+***** $z=0$ solutions
+#+begin_src sage
+  zz_eqns = reduced_problem(z==0)
+  zz_sep_solns = red_sep_sols(zz_eqns, xz_lambdas, [x, y])
+  zz_solns = all_solutions(zz_sep_solns + [[z==0]])
+  for sol in zz_solns:
+        print(f"${latex(sol)}$")
+#+end_src
+
+#+RESULTS:
+:results:
+$\left[x = \frac{1}{2} \, \sqrt{2}, y = \frac{1}{2} \, \sqrt{2}, z = 0\right]$
+$\left[x = \frac{1}{2} \, \sqrt{2}, y = -\frac{1}{2} \, \sqrt{2}, z = 0\right]$
+$\left[x = -\frac{1}{2} \, \sqrt{2}, y = \frac{1}{2} \, \sqrt{2}, z = 0\right]$
+$\left[x = -\frac{1}{2} \, \sqrt{2}, y = -\frac{1}{2} \, \sqrt{2}, z = 0\right]$
+:end:
+
+***** Two zeros
+
+#+begin_src sage
+  def two_zero_solns(subs, var, idx):
+    eqns = reduced_problem(subs)
+    solns = solve(eqns[1], var)
+    return [subs[:idx] + [s] + subs[idx:] for s in solns]
+
+  xyz_solns = two_zero_solns([x==0, y==0], z, 2)
+  for sol in xyz_solns:
+        print(f"${latex(sol)}$")
+
+  xzz_solns = two_zero_solns([x==0, z==0], y, 1)
+  for sol in xzz_solns:
+        print(f"${latex(sol)}$")
+
+  yzz_solns = two_zero_solns([y==0, z==0], x, 0)
+  for sol in yzz_solns:
+        print(f"${latex(sol)}$")
+
+#+end_src
+
+#+RESULTS:
+:results:
+$\left[x = 0, y = 0, z = \left(-1\right)\right]$
+$\left[x = 0, y = 0, z = 1\right]$
+$\left[x = 0, y = \left(-1\right), z = 0\right]$
+$\left[x = 0, y = 1, z = 0\right]$
+$\left[x = \left(-1\right), y = 0, z = 0\right]$
+$\left[x = 1, y = 0, z = 0\right]$
+:end:
+
+***** All solutions
+#+begin_src sage
+  all_solns = nz_solns + xz_solns + yz_solns + zz_solns + xyz_solns + xzz_solns + yzz_solns
+#+end_src
+
+#+RESULTS:
+:results:
+:end:
+
+Different ways of printing them:
+#+begin_src sage
+  lines = ""
+  print(r"\begin{align*}")
+  for i, sol in enumerate(all_solns):
+      eqs = [ f"{latex(s.lhs())}&={latex(s.rhs())}" for s in sol]
+      line = f"{i+1}:& &" + "&".join(eqs)
+      if i == 0:
+          lines = line
+      elif i % 2 == 0:
+          lines += "\\\\\n" + line
+      else:
+          lines += "&" + line
+  print(lines)
+  print(r"\end{align*}")
+#+end_src
+
+#+RESULTS:
+:results:
+\begin{align*}
+1:& &x&=\frac{1}{3} \, \sqrt{3}&y&=\frac{1}{3} \, \sqrt{3}&z&=\frac{1}{3} \, \sqrt{3}&2:& &x&=\frac{1}{3} \, \sqrt{3}&y&=\frac{1}{3} \, \sqrt{3}&z&=-\frac{1}{3} \, \sqrt{3}\\
+3:& &x&=\frac{1}{3} \, \sqrt{3}&y&=-\frac{1}{3} \, \sqrt{3}&z&=\frac{1}{3} \, \sqrt{3}&4:& &x&=\frac{1}{3} \, \sqrt{3}&y&=-\frac{1}{3} \, \sqrt{3}&z&=-\frac{1}{3} \, \sqrt{3}\\
+5:& &x&=-\frac{1}{3} \, \sqrt{3}&y&=\frac{1}{3} \, \sqrt{3}&z&=\frac{1}{3} \, \sqrt{3}&6:& &x&=-\frac{1}{3} \, \sqrt{3}&y&=\frac{1}{3} \, \sqrt{3}&z&=-\frac{1}{3} \, \sqrt{3}\\
+7:& &x&=-\frac{1}{3} \, \sqrt{3}&y&=-\frac{1}{3} \, \sqrt{3}&z&=\frac{1}{3} \, \sqrt{3}&8:& &x&=-\frac{1}{3} \, \sqrt{3}&y&=-\frac{1}{3} \, \sqrt{3}&z&=-\frac{1}{3} \, \sqrt{3}\\
+9:& &x&=0&y&=\frac{1}{2} \, \sqrt{2}&z&=\frac{1}{2} \, \sqrt{2}&10:& &x&=0&y&=\frac{1}{2} \, \sqrt{2}&z&=-\frac{1}{2} \, \sqrt{2}\\
+11:& &x&=0&y&=-\frac{1}{2} \, \sqrt{2}&z&=\frac{1}{2} \, \sqrt{2}&12:& &x&=0&y&=-\frac{1}{2} \, \sqrt{2}&z&=-\frac{1}{2} \, \sqrt{2}\\
+13:& &x&=\frac{1}{2} \, \sqrt{2}&y&=0&z&=\frac{1}{2} \, \sqrt{2}&14:& &x&=\frac{1}{2} \, \sqrt{2}&y&=0&z&=-\frac{1}{2} \, \sqrt{2}\\
+15:& &x&=-\frac{1}{2} \, \sqrt{2}&y&=0&z&=\frac{1}{2} \, \sqrt{2}&16:& &x&=-\frac{1}{2} \, \sqrt{2}&y&=0&z&=-\frac{1}{2} \, \sqrt{2}\\
+17:& &x&=\frac{1}{2} \, \sqrt{2}&y&=\frac{1}{2} \, \sqrt{2}&z&=0&18:& &x&=\frac{1}{2} \, \sqrt{2}&y&=-\frac{1}{2} \, \sqrt{2}&z&=0\\
+19:& &x&=-\frac{1}{2} \, \sqrt{2}&y&=\frac{1}{2} \, \sqrt{2}&z&=0&20:& &x&=-\frac{1}{2} \, \sqrt{2}&y&=-\frac{1}{2} \, \sqrt{2}&z&=0\\
+21:& &x&=0&y&=0&z&=-1&22:& &x&=0&y&=0&z&=1\\
+23:& &x&=0&y&=-1&z&=0&24:& &x&=0&y&=1&z&=0\\
+25:& &x&=-1&y&=0&z&=0&26:& &x&=1&y&=0&z&=0
+\end{align*}
+:end:
+
+#+begin_src sage
+  lines = []
+  print(r"\begin{multicols}{2}")
+  print(r"\begin{enumerate}")
+  for i, sol in enumerate(all_solns):
+      eqs = [ f"{latex(s)}" for s in sol]
+      lines.append(rf"\item ${r"\land ".join(eqs)}$")
+  print(r"\n".join(lines))
+  print(r"\end{enumerate}")
+  print(r"\end{multicols}")
+#+end_src
+
+#+RESULTS:
+:results:
+\begin{multicols}{2}
+\begin{enumerate}
+\item $x = \frac{1}{3} \, \sqrt{3}\land y = \frac{1}{3} \, \sqrt{3}\land z = \frac{1}{3} \, \sqrt{3}$\n\item $x = \frac{1}{3} \, \sqrt{3}\land y = \frac{1}{3} \, \sqrt{3}\land z = -\frac{1}{3} \, \sqrt{3}$\n\item $x = \frac{1}{3} \, \sqrt{3}\land y = -\frac{1}{3} \, \sqrt{3}\land z = \frac{1}{3} \, \sqrt{3}$\n\item $x = \frac{1}{3} \, \sqrt{3}\land y = -\frac{1}{3} \, \sqrt{3}\land z = -\frac{1}{3} \, \sqrt{3}$\n\item $x = -\frac{1}{3} \, \sqrt{3}\land y = \frac{1}{3} \, \sqrt{3}\land z = \frac{1}{3} \, \sqrt{3}$\n\item $x = -\frac{1}{3} \, \sqrt{3}\land y = \frac{1}{3} \, \sqrt{3}\land z = -\frac{1}{3} \, \sqrt{3}$\n\item $x = -\frac{1}{3} \, \sqrt{3}\land y = -\frac{1}{3} \, \sqrt{3}\land z = \frac{1}{3} \, \sqrt{3}$\n\item $x = -\frac{1}{3} \, \sqrt{3}\land y = -\frac{1}{3} \, \sqrt{3}\land z = -\frac{1}{3} \, \sqrt{3}$\n\item $x = 0\land y = \frac{1}{2} \, \sqrt{2}\land z = \frac{1}{2} \, \sqrt{2}$\n\item $x = 0\land y = \frac{1}{2} \, \sqrt{2}\land z = -\frac{1}{2} \, \sqrt{2}$\n\item $x = 0\land y = -\frac{1}{2} \, \sqrt{2}\land z = \frac{1}{2} \, \sqrt{2}$\n\item $x = 0\land y = -\frac{1}{2} \, \sqrt{2}\land z = -\frac{1}{2} \, \sqrt{2}$\n\item $x = \frac{1}{2} \, \sqrt{2}\land y = 0\land z = \frac{1}{2} \, \sqrt{2}$\n\item $x = \frac{1}{2} \, \sqrt{2}\land y = 0\land z = -\frac{1}{2} \, \sqrt{2}$\n\item $x = -\frac{1}{2} \, \sqrt{2}\land y = 0\land z = \frac{1}{2} \, \sqrt{2}$\n\item $x = -\frac{1}{2} \, \sqrt{2}\land y = 0\land z = -\frac{1}{2} \, \sqrt{2}$\n\item $x = \frac{1}{2} \, \sqrt{2}\land y = \frac{1}{2} \, \sqrt{2}\land z = 0$\n\item $x = \frac{1}{2} \, \sqrt{2}\land y = -\frac{1}{2} \, \sqrt{2}\land z = 0$\n\item $x = -\frac{1}{2} \, \sqrt{2}\land y = \frac{1}{2} \, \sqrt{2}\land z = 0$\n\item $x = -\frac{1}{2} \, \sqrt{2}\land y = -\frac{1}{2} \, \sqrt{2}\land z = 0$\n\item $x = 0\land y = 0\land z = \left(-1\right)$\n\item $x = 0\land y = 0\land z = 1$\n\item $x = 0\land y = \left(-1\right)\land z = 0$\n\item $x = 0\land y = 1\land z = 0$\n\item $x = \left(-1\right)\land y = 0\land z = 0$\n\item $x = 1\land y = 0\land z = 0$
+\end{enumerate}
+\end{multicols}
+:end:
+
+** 5.10
+:PROPERTIES:
+:header-args: :session 5-10
+:END:
+
+The problem describes the envelope, i.e., the curve which describes
+the "cover" of all possible positions of a ladder of fixed length next
+to a wall.
+
+Given $a$, the distance of the ladder from the wall, and $b$, the
+height of the wall where the ladder touches it, the $(x, y)$ points
+corresponding to the line representing the ladder are given by:
+#+begin_src sage
+  x, y, a, b, L = var("x, y, a, b, L")
+  assume(a>0, b>0, x>0, y>0)
+  ladder = x / a + y / b == 1
+  assume(ladder)
+  print(fr"\[{latex(ladder)}\]")
+#+end_src
+
+#+RESULTS:
+:results:
+\[\frac{x}{a} + \frac{y}{b} = 1\]
+:end:
+
+Assuming the length of the ladder is $L$ then $a$ and $b$ must
+satisfy:
+#+begin_src sage
+  ladder_len = L^2 == a^2 + b^2
+  assume(ladder_len)
+  print(fr"\[{latex(ladder_len)}\]")
+#+end_src
+
+#+RESULTS:
+:results:
+\[L^{2} = a^{2} + b^{2}\]
+:end:
+
+To use the envelope equations we express $b$ as a function of $a$
+#+begin_src sage
+  sol_b = solve(ladder_len, b)[0]
+  print(rf"\[{latex(sol_b)}\]")
+#+end_src
+
+#+RESULTS:
+:results:
+$b = \sqrt{L^{2} - a^{2}}$
+:end:
+
+I.e., we solve the system of the following system of two equations:
+
+#+begin_src sage
+  fxya = ladder.substitute(b == sol_b.rhs()) - ladder.rhs()
+  dfxya = fxya.diff(a)
+  print(r"\begin{align*}")
+  print(rf"f(x,y,a) &\equiv {latex(fxya)} \\")
+  print(rf"\frac{{\partial f(x, y, a)}}{{\partial a}} &\equiv {latex(dfxya)}")
+  print(r"\end{align*}")
+#+end_src
+
+#+RESULTS:
+:results:
+\begin{align*}
+f(x,y,a) &\equiv \frac{y}{\sqrt{L^{2} - a^{2}}} + \frac{x}{a} - 1 = 0 \\
+\frac{\partial f(x, y, a)}{\partial a} &\equiv \frac{a y}{{\left(L^{2} - a^{2}\right)}^{\frac{3}{2}}} - \frac{x}{a^{2}} = 0
+\end{align*}
+:end:
+
+
+The solutions for $x$ and $y$ are as follows:
+#+begin_src sage
+  sol_xy = solve([dfxya, fxya], [x,y])[0]
+  print(r"\begin{align*}")
+  for sol in sol_xy:
+    print(rf"{latex(sol.lhs())} &= {latex(sol.rhs())}\\")
+  print(r"\end{align*}")
+#+end_src
+
+#+RESULTS:
+:results:
+\begin{align*}
+x &= \frac{a^{3}}{L^{2}}\\
+y &= \frac{{\left(L^{2} - a^{2}\right)}^{\frac{3}{2}}}{L^{2}}\\
+\end{align*}
+:end:
+
+By raising both equations to the power of $2/3$ we get
+#+begin_src sage
+  sol_xy = [(s^(2/3)).canonicalize_radical() for s in sol_xy]
+  print(r"\begin{align*}")
+  for sol in sol_xy:
+    print(rf"{latex(sol.lhs())} &= {latex(sol.rhs())}\\")
+  print(r"\end{align*}")
+#+end_src
+
+#+RESULTS:
+:results:
+\begin{align*}
+x^{\frac{2}{3}} &= \frac{a^{2}}{L^{\frac{4}{3}}}\\
+y^{\frac{2}{3}} &= \frac{L^{2} - a^{2}}{L^{\frac{4}{3}}}\\
+\end{align*}
+:end:
+
+When combined we get the curve of the envelope, which is an /astroid/.
+#+begin_src sage
+  astroid = sol_x + sol_y
+  astroid = astroid.expand()
+  print(rf"\[{latex(astroid)}\]")
+#+end_src
+
+#+RESULTS:
+:results:
+$x^{\frac{2}{3}} + y^{\frac{2}{3}} = L^{\frac{2}{3}}$
+:end:
+
+To check that we did everything right, let's plot the astroid envelope
+curve and a few possible positions of the "ladder":
+
+#+begin_src sage :results file :file /tmp/astroid.png
+  P = implicit_plot(astroid.substitute(L==1), (0,1), (0,1))
+  n = 30
+  for t in range(1, n):
+      aa = t / n
+      bb = sqrt(1 - aa^2)
+      expr = ladder.substitute(a == aa, b == bb, L == 1)
+      print(expr)
+      P += implicit_plot(expr, (0, 1), (0, 1), linewidth=0.2, color="green")
+  P.save("/tmp/astroid.png")
+#+end_src
+
+#+RESULTS:
+:results:
+[[file:/tmp/astroid.png]]
+:end:
+
+** 5.11
+:PROPERTIES:
+:header-args: :session 5-11
+:END:
+#+begin_src sage
+  from sage.symbolic.function_factory import function
+  # U, T, S, P, V = function
+  U = function("U", nargs=2)
+  T = function("T", nargs=2)
+  S = function("S", nargs=2)
+  P = function("P", nargs=2)
+  V = function("V", nargs=2)
+  X, Y = var("X, Y")
+  U(X, Y).diff(X)
+#+end_src
+
+#+RESULTS:
+:results:
+diff(U(X, Y), X)
+:end:
+
+* 7
+
+** 7.7
+
+- Equation 7.40:
+  - $\mathbf{r} = \mathbf{a} + \lambda \mathbf{b}$
+  - which means
+  - $x = a_x + \lambda b_x$
+  - $y = a_y + \lambda b_y$
+  - $z = a_z + \lambda b_z$
+  - then
+  - $x - a_x = \lambda b_x$
+  - $y - a_y = \lambda b_y$
+  - $z - a_z = \lambda b_z$
+  - then
+  - $(x - a_x) / b_x = \lambda$
+  - $(y - a_y) / b_y = \lambda$
+  - $(z - a_z) / b_z = \lambda$
+    
+* My notes
+** Trajectory
+:PROPERTIES:
+:header-args: :session trajectory
+:END:
+#+begin_src sage :results file :file /tmp/trajectory.png
+  traj_plots = Graphics()
+  n = 20
+  cover = 0.99 * pi / 4
+  for t in range(n + 1):
+    theta = pi / 4 + cover * t/n
+    v = 3.0
+    g = 9.8
+    y = x * tan(theta) - (g * x^2) / (2 * v^2 * cos(theta)^2)
+    color = hue(0.3 * t/n)
+    traj_plots += plot(y, (x, 0, 1), ymin=-0.1, color=color)
+  traj_plots.save("/tmp/trajectory.png")
+#+end_src
+
+#+RESULTS:
+:results:
+[[file:/tmp/trajectory.png]]
+:end:
+
