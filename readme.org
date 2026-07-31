@@ -1,0 +1,13 @@
+#+title: Exercises from "Mathematical Methods For Physics and Engineering"
+
+* Readme
+
+Main content is in ~main.org~.
+
+* Usage
+
+Open in Emacs and export the entire file or a subtree.
+
+* Notes
+
+Add install instructions when/if something fails.
