@@ -1,4 +1,4 @@
-#+title: Exercises from "Mathematical Methods For Physics and Engineering"
+#+title: Exercises from "Mathematical Methods For Physics and Engineering" book
 
 * Readme
 
